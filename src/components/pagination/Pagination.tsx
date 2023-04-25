@@ -27,7 +27,7 @@ const usePagination = (data: any, itemsPerPage: number) => {
   return { next, prev, jump, currentData, currentPage, maxPage };
 };
 
-const Pagination = ({ data, itemsPerPage, renderItem }: { data: any, itemsPerPage: number, renderItem: Function }) => {
+const Pagination = ({ data, itemsPerPage, renderItem, onPageChange }: { data: any, itemsPerPage: number, renderItem: Function, onPageChange: any }) => {
 
   const { next, prev, jump, currentData, currentPage, maxPage } =
     usePagination(data, itemsPerPage);
@@ -46,6 +46,7 @@ const Pagination = ({ data, itemsPerPage, renderItem }: { data: any, itemsPerPag
             key={i}
             onClick={() => jump(i + 1)}
             className={currentPage === i + 1 ? "active" : "pageItem"}
+            onChange={onPageChange}
           >
             {i + 1}
           </button>

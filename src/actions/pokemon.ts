@@ -9,12 +9,13 @@ interface GetPokemonsOptions {
     limit?: number
 }
 
-export const getPokemons = (options: GetPokemonsOptions = {}) => (dispatch: any) => {
-    const { limit = 784 } = options
+export const getPokemons = (page: number = 1, options: GetPokemonsOptions = {}) => (dispatch: any) => {
+    const { limit = 20 } = options;
+    const offset = (page - 1) * limit;
 
     return dispatch({
         [RSAA]: {
-            endpoint: `https://pokeapi.co/api/v2/pokemon/?limit=100`,
+            endpoint: `https://pokeapi.co/api/v2/pokemon/?limit=${limit}&offset=${offset}`,
             method: 'GET',
             types: [
                 getPokemonsRequest.type,
@@ -24,4 +25,5 @@ export const getPokemons = (options: GetPokemonsOptions = {}) => (dispatch: any)
         }
     })
 }
+
 

@@ -4,14 +4,23 @@ import ga from '../../utils/ga';
 import Pokemon from "../pokemon-item/PokemonItem";
 import Search from '../search/Search';
 import TextConstants from "../../constants/TextConstants";
-import DropDown from "../dropdown/DropDown";
 import "./styles.css"
 import Pagination from "../pagination/Pagination";
+import Modal from "../modal";
 
 const PokemonList = ({ getPokemons, collection, isFetched }: any) => {
   const [searchString, setSearchString] = useState('');
   const [pokemonsIds, setPokemonsIds] = useState<string[]>(Object.keys(collection));
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 20;
+  const [isOpen, setIsOpen] = useState(false);
+    const [description, setDescription] = useState();
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  }
 
   useEffect(() => {
     ga.pageview('/');
@@ -23,62 +32,61 @@ const PokemonList = ({ getPokemons, collection, isFetched }: any) => {
     if (Object.keys(collection).length > 0) {
       if (!searchString) {
         setPokemonsIds(Object.keys(collection) as string[]);
-      } else {
-        const filteredPokemonsIds = Object.keys(collection).filter(
-          (pokemonId) => {
-            const pokemon = collection[pokemonId];
-            return pokemon.name.includes(searchString);
-          }
-        );
-        setPokemonsIds(filteredPokemonsIds);
-        setSearchString(searchString);
       }
     }
   }, [collection]);
 
-  const handleSearch = (event: any) => {
-    const value = event.currentTarget.value.toLowerCase().trim();
-    hardtack.set('searchString', value, {
-      maxAge: 31536000
-    });
+const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const searchString = event.target.value.trim().toLowerCase();
+  setSearchString(searchString);
 
-    if (value === '') {
-      setPokemonsIds(Object.keys(collection));
-      setSearchString(value);
-    } else {
-      const filteredPokemonsIds = Object.keys(collection).filter(pokemonId => {
-        const pokemon = collection[pokemonId];
-        return pokemon.name.includes(value);
-      });
-      setPokemonsIds(filteredPokemonsIds);
-      setSearchString(value);
-    }
-  }
-
-  const handleRenderItem = () => {
-    console.log('here');
-  }
-  // const handleSelect = () => {
-  //   console.log('here');
-  // }
-
-  // const options = [
-  //   { label: "Option 1", value: "option1" },
-  //   { label: "Option 2", value: "option2" },
-  //   { label: "Option 3", value: "option3" },
-  // ];
-
-  const pokemons = pokemonsIds.map(pokemonId => {
+  const filteredPokemonsIds = Object.keys(collection).filter(pokemonId => {
     const pokemon = collection[pokemonId];
-    return (
-      <div className="pokemons__item" key={pokemon.id}>
-        <Pokemon pokemon={pokemon} />
-      </div>
-    );
+    return pokemon.name.toLowerCase().includes(searchString);
   });
 
-  console.log(pokemons, 'pokemons')
-  console.log(pokemonsIds, 'pokemonsIds')
+  setPokemonsIds(filteredPokemonsIds);
+}
+
+
+    const handleItemClick = async (pokemon: any) => {
+      try {
+        const response = await fetch(`https://pokeapi.co/api/v2/ability/${pokemon.id}`);
+        const data = await response.json();
+        console.log(data);
+        setDescription(data.effect_entries[1])
+      } catch (error) {
+        console.error(error);
+      }
+      setIsOpen(true)
+    };
+
+
+const handleRenderItem = (index: number) => {
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const pagePokemonsIds = pokemonsIds.slice(startIndex, endIndex);
+
+  if (index >= pagePokemonsIds.length) {
+    return null;
+  }
+
+  const pokemonId = pagePokemonsIds[index];
+  const pokemon = collection[pokemonId];
+console.log(pokemon, '22')
+  return (
+    <div key={pokemon.id} onClick={() => handleItemClick(pokemon)}>
+      <Pokemon pokemon={pokemon} />
+    </div>
+  );
+}
+
+  useEffect(() => {
+    const totalItems = Object.keys(collection).length;
+    const newTotalPages = Math.ceil(totalItems / itemsPerPage);
+    setTotalPages(newTotalPages);
+  }, [collection]);
+
   useEffect(() => {
     getPokemons().then((action: any) => {
       if (action.error) {
@@ -87,24 +95,44 @@ const PokemonList = ({ getPokemons, collection, isFetched }: any) => {
     });
   }, []);
 
+  const handleCloseModal = () => {
+      setIsOpen(!isOpen)
+  }
+
   return (
     <>
-      {/*<DropDown options={options} onSelect={handleSelect} />*/}
       <div className="page" style={{ position: "relative" }}>
-        <h1 style={{ display: "flex", justifyContent: "center" }}>
+        <h1 style={{ display: "flex", justifyContent: "center"}}>
           {TextConstants.TITLES.POKEMON_LIST}
         </h1>
         {error && <div className="page__error">{error}</div>}
         <div className="page__search" style={{ display: "flex", justifyContent: "center" }}>
-          <Search onChange={handleSearch} value={searchString} />
+          <Search onChange={handleSearch} />
         </div>
         {isFetched ? (
           <h1>Loading...</h1>
-        ) : (
-          <div className="container" >{pokemons}</div>
-        )}
+        ) : null}
       </div>
-      <Pagination data={pokemonsIds} itemsPerPage={10} renderItem={handleRenderItem} />
+      <Pagination
+      data={pokemonsIds}
+      itemsPerPage={10}
+      renderItem={handleRenderItem}
+       onPageChange={handlePageChange} />
+      <Modal isOpen={isOpen} onClose={handleCloseModal}>
+      <div style={{
+      position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        padding: "0 30px 20px 30px",
+        backgroundColor: "#ffffff",
+        border: "1px solid lightGrey",
+        zIndex: "3444"
+      }}>
+        <h4>{TextConstants.TITLES.POKEMON}</h4>
+        <div>{description && JSON.stringify(description)}</div>
+        </div>
+        </Modal>
     </>
   );
 };
